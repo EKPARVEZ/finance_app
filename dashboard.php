@@ -229,5 +229,7 @@ $monthly_data = $monthly_stmt->fetchAll();
             // You can add additional JavaScript formatting here if needed
         });
     </script>
+		<?php include 'footer.php'; ?>
 </body>
+
 </html>
