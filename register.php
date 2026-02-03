@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="bd.png">
     <title>Register - Finance Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -38,4 +39,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <p>Already have an account? <a href="login.php">Login here</a></p>
     </div>
 </body>
+
 </html>
