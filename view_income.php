@@ -8,7 +8,45 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Handle delete action
+// Handle bulk delete action
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_delete']) && isset($_POST['selected_ids']) && !empty($_POST['selected_ids'])) {
+    $selected_ids = $_POST['selected_ids'];
+    
+    // Ensure selected_ids is an array
+    if (is_string($selected_ids)) {
+        $selected_ids = explode(',', $selected_ids);
+    }
+    
+    if (empty($selected_ids)) {
+        $_SESSION['message'] = 'Please select at least one income record to delete!';
+        $_SESSION['message_type'] = 'error';
+    } else {
+        try {
+            // Create placeholders for the prepared statement
+            $placeholders = implode(',', array_fill(0, count($selected_ids), '?'));
+            
+            // Prepare and execute delete query
+            $stmt = $pdo->prepare("DELETE FROM income WHERE id IN ($placeholders) AND user_id = ?");
+            
+            // Bind parameters: selected_ids + user_id
+            $params = array_merge($selected_ids, [$user_id]);
+            $stmt->execute($params);
+            
+            $deleted_count = $stmt->rowCount();
+            $_SESSION['message'] = "Successfully deleted $deleted_count income record(s)!";
+            $_SESSION['message_type'] = 'success';
+            
+            header('Location: view_income.php');
+            exit();
+            
+        } catch(PDOException $e) {
+            $_SESSION['message'] = 'Error: ' . $e->getMessage();
+            $_SESSION['message_type'] = 'error';
+        }
+    }
+}
+
+// Handle single delete action
 if (isset($_GET['delete_id'])) {
     $delete_id = $_GET['delete_id'];
     $stmt = $pdo->prepare("DELETE FROM income WHERE id = ? AND user_id = ?");
@@ -20,19 +58,42 @@ if (isset($_GET['delete_id'])) {
     exit();
 }
 
-// Get all income records
-$stmt = $pdo->prepare("SELECT * FROM income WHERE user_id = ? ORDER BY date DESC");
-$stmt->execute([$user_id]);
+// Build query for filtering
+$where_conditions = ["user_id = ?"];
+$params = [$user_id];
+
+// Filter by date range
+if (isset($_GET['start_date']) && !empty($_GET['start_date'])) {
+    $where_conditions[] = "date >= ?";
+    $params[] = $_GET['start_date'];
+}
+
+if (isset($_GET['end_date']) && !empty($_GET['end_date'])) {
+    $where_conditions[] = "date <= ?";
+    $params[] = $_GET['end_date'];
+}
+
+// Filter by search term
+if (isset($_GET['search']) && !empty($_GET['search'])) {
+    $where_conditions[] = "(name LIKE ?)";
+    $params[] = '%' . $_GET['search'] . '%';
+}
+
+$where_clause = implode(' AND ', $where_conditions);
+
+// Get all income records with filters
+$stmt = $pdo->prepare("SELECT * FROM income WHERE $where_clause ORDER BY date DESC");
+$stmt->execute($params);
 $income_records = $stmt->fetchAll();
 
-// Get total income
-$total_stmt = $pdo->prepare("SELECT SUM(amount) as total FROM income WHERE user_id = ?");
-$total_stmt->execute([$user_id]);
+// Get total income with filters
+$total_stmt = $pdo->prepare("SELECT SUM(amount) as total FROM income WHERE $where_clause");
+$total_stmt->execute($params);
 $total_income = $total_stmt->fetch()['total'] ?? 0;
 
-// Get total count
-$count_stmt = $pdo->prepare("SELECT COUNT(*) as count FROM income WHERE user_id = ?");
-$count_stmt->execute([$user_id]);
+// Get total count with filters
+$count_stmt = $pdo->prepare("SELECT COUNT(*) as count FROM income WHERE $where_clause");
+$count_stmt->execute($params);
 $income_count = $count_stmt->fetch()['count'];
 
 // Display session messages
@@ -97,6 +158,74 @@ if (isset($_SESSION['message'])) {
             font-size: 14px;
         }
         
+        /* Bulk Actions */
+        .bulk-actions {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .bulk-actions h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        
+        .checkbox-group {
+            margin: 10px 0;
+        }
+        
+        .bulk-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-bulk {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-bulk-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-bulk-delete:hover {
+            background-color: #c82333;
+        }
+        
+        .btn-select-all {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-select-all:hover {
+            background-color: #5a6268;
+        }
+        
+        .btn-deselect-all {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-deselect-all:hover {
+            background-color: #138496;
+        }
+        
+        .selected-count {
+            margin-left: 10px;
+            color: #6c757d;
+            font-weight: bold;
+        }
+        
         /* Table Styles */
         .data-table {
             width: 100%;
@@ -137,6 +266,23 @@ if (isset($_SESSION['message'])) {
             color: #2ecc71;
             font-weight: bold;
             margin-right: 2px;
+        }
+        
+        /* Table Column Styles */
+        .serial-column {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .checkbox-column {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .checkbox-column input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
         
         /* Action Buttons */
@@ -319,6 +465,10 @@ if (isset($_SESSION['message'])) {
             .form-group {
                 width: 100%;
             }
+            
+            .bulk-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -421,24 +571,60 @@ if (isset($_SESSION['message'])) {
                 </a>
             </form>
         </div>
-<div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-    <a href="export_form.php" class="export-btn">
-        <i class="fas fa-file-export"></i> Full Report
-    </a>
-    <a href="export.php?start_date=<?php echo date('Y-m-01'); ?>&end_date=<?php echo date('Y-m-t'); ?>" class="export-btn" style="background: #3498db;">
-        <i class="fas fa-download"></i> Export Current Month
-    </a>
-</div>
+
+        <!-- Bulk Actions (only show if there are records) -->
+        <?php if (!empty($income_records)): ?>
+        <div class="bulk-actions">
+            <h3><i class="fas fa-tasks"></i> Bulk Actions 
+                <span class="selected-count" id="selectedCount">0 selected</span>
+            </h3>
+            <form method="POST" action="" id="bulkDeleteForm">
+                <input type="hidden" name="bulk_delete" value="1">
+                <input type="hidden" name="selected_ids" id="selectedIds" value="">
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="select_all">
+                    <label for="select_all">Select All Records</label>
+                </div>
+                
+                <div class="bulk-buttons">
+                    <button type="button" class="btn-bulk btn-bulk-delete" onclick="performBulkDelete()">
+                        <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                    <button type="button" class="btn-bulk btn-select-all" onclick="selectAllRecords()">
+                        <i class="fas fa-check-square"></i> Select All
+                    </button>
+                    <button type="button" class="btn-bulk btn-deselect-all" onclick="deselectAllRecords()">
+                        <i class="fas fa-square"></i> Deselect All
+                    </button>
+                </div>
+            </form>
+        </div>
+        <?php endif; ?>
+
+        <!-- Export Buttons -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <a href="export_form.php" class="export-btn">
+                <i class="fas fa-file-export"></i> Full Report
+            </a>
+            <a href="export.php?start_date=<?php echo date('Y-m-01'); ?>&end_date=<?php echo date('Y-m-t'); ?>" class="export-btn" style="background: #3498db;">
+                <i class="fas fa-download"></i> Export Current Month
+            </a>
+        </div>
+
         <!-- Income Table -->
         <div class="table-container">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2><i class="fas fa-list"></i> All Income Records</h2>
-                
+                <h2><i class="fas fa-list"></i> All Income Records (<?php echo $income_count; ?> records found)</h2>
             </div>
             
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th class="serial-column">#</th>
+                        <?php if (!empty($income_records)): ?>
+                        <th class="checkbox-column">Select</th>
+                        <?php endif; ?>
                         <th>Date</th>
                         <th>Name</th>
                         <th>Amount (BDT)</th>
@@ -446,10 +632,10 @@ if (isset($_SESSION['message'])) {
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="incomeTableBody">
                     <?php if (empty($income_records)): ?>
                         <tr>
-                            <td colspan="5" class="no-records">
+                            <td colspan="<?php echo !empty($income_records) ? '7' : '6'; ?>" class="no-records">
                                 <i class="fas fa-file-invoice-dollar"></i>
                                 <h3>No Income Records Found</h3>
                                 <p>Start by adding your first income record</p>
@@ -459,8 +645,13 @@ if (isset($_SESSION['message'])) {
                             </td>
                         </tr>
                     <?php else: ?>
+                        <?php $serial = 1; ?>
                         <?php foreach ($income_records as $income): ?>
                         <tr>
+                            <td class="serial-column"><?php echo $serial++; ?></td>
+                            <td class="checkbox-column">
+                                <input type="checkbox" class="record-checkbox" data-id="<?php echo $income['id']; ?>">
+                            </td>
                             <td><?php echo date('d/m/Y', strtotime($income['date'])); ?></td>
                             <td><?php echo htmlspecialchars($income['name']); ?></td>
                             <td class="income-amount"><span class="currency-symbol">৳</span><?php echo number_format($income['amount'], 2); ?></td>
@@ -483,7 +674,7 @@ if (isset($_SESSION['message'])) {
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="2"><strong>Total</strong></td>
+                        <td colspan="<?php echo !empty($income_records) ? '4' : '3'; ?>"><strong>Total</strong></td>
                         <td><strong class="income-amount"><span class="currency-symbol">৳</span><?php echo number_format($total_income, 2); ?></strong></td>
                         <td colspan="2"></td>
                     </tr>
@@ -531,7 +722,98 @@ if (isset($_SESSION['message'])) {
                     }
                 });
             });
+            
+            // Initialize selected count
+            updateSelectedCount();
+        });
+        
+        // Function to select all records
+        function selectAllRecords() {
+            var checkboxes = document.querySelectorAll('.record-checkbox');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = true;
+            });
+            document.getElementById('select_all').checked = true;
+            updateSelectedCount();
+        }
+        
+        // Function to deselect all records
+        function deselectAllRecords() {
+            var checkboxes = document.querySelectorAll('.record-checkbox');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = false;
+            });
+            document.getElementById('select_all').checked = false;
+            updateSelectedCount();
+        }
+        
+        // Function to update selected count
+        function updateSelectedCount() {
+            var selectedCount = document.querySelectorAll('.record-checkbox:checked').length;
+            document.getElementById('selectedCount').textContent = selectedCount + ' selected';
+        }
+        
+        // Function to get selected IDs
+        function getSelectedIds() {
+            var selectedIds = [];
+            var checkboxes = document.querySelectorAll('.record-checkbox:checked');
+            checkboxes.forEach(function(checkbox) {
+                selectedIds.push(checkbox.getAttribute('data-id'));
+            });
+            return selectedIds;
+        }
+        
+        // Function to perform bulk delete
+        function performBulkDelete() {
+            var selectedIds = getSelectedIds();
+            
+            if (selectedIds.length === 0) {
+                alert('Please select at least one record to delete.');
+                return false;
+            }
+            
+            if (confirm('Are you sure you want to delete ' + selectedIds.length + ' selected income record(s)? This action cannot be undone.')) {
+                // Set the selected IDs in the hidden field
+                document.getElementById('selectedIds').value = selectedIds.join(',');
+                
+                // Submit the bulk delete form
+                document.getElementById('bulkDeleteForm').submit();
+            }
+        }
+        
+        // Select all checkbox functionality
+        var selectAllCheckbox = document.getElementById('select_all');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                var checkboxes = document.querySelectorAll('.record-checkbox');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                updateSelectedCount();
+            });
+        }
+        
+        // Update selected count when individual checkboxes change
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('record-checkbox')) {
+                var checkboxes = document.querySelectorAll('.record-checkbox');
+                var allChecked = true;
+                
+                checkboxes.forEach(function(checkbox) {
+                    if (!checkbox.checked) {
+                        allChecked = false;
+                    }
+                });
+                
+                var selectAllCheckbox = document.getElementById('select_all');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                }
+                
+                updateSelectedCount();
+            }
         });
     </script>
+	<?php include 'footer.php'; ?>
 </body>
 </html>
