@@ -112,6 +112,7 @@ if (isset($_SESSION['message'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Income - Finance Tracker</title>
+	<link rel="icon" type="image/png" sizes="32x32" href="bd.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -817,3 +818,4 @@ if (isset($_SESSION['message'])) {
 	<?php include 'footer.php'; ?>
 </body>
 </html>
+
