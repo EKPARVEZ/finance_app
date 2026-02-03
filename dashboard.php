@@ -158,7 +158,7 @@ $monthly_data = $monthly_stmt->fetchAll();
                 </tbody>
             </table>
         </div>
-
+	</div>
        
 
     <script>
@@ -233,3 +233,4 @@ $monthly_data = $monthly_stmt->fetchAll();
 </body>
 
 </html>
+
