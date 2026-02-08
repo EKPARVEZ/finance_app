@@ -72,6 +72,7 @@ $monthly_data = $monthly_stmt->fetchAll();
                 <a href="expenses.php"><i class="fas fa-shopping-cart"></i> Expenses</a>
                 <a href="view_income.php"><i class="fas fa-eye"></i> View Income</a>
                 <a href="view_expenses.php"><i class="fas fa-eye"></i> View Expenses</a>
+				<a href="backup_database.php"><i class="fas fa-database"></i> Backup</a>
                 <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </nav>
@@ -234,5 +235,6 @@ $monthly_data = $monthly_stmt->fetchAll();
 </body>
 
 </html>
+
 
 
