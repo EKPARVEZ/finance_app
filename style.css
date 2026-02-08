@@ -11,8 +11,8 @@ body {
 }
 
 .container {
-    width: 90%;
-    max-width: 1200px;
+    width: auto;
+    max-width: auto;
     margin: 0 auto;
     padding: 20px;
 }
@@ -601,4 +601,5 @@ tbody tr:hover {
 .action-btn span {
     font-size: 0.9rem;
     text-align: center;
+
 }
