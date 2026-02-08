@@ -43,6 +43,7 @@
                         <li><a href="expenses.php"><i class="fas fa-shopping-cart"></i> Add Expense</a></li>
                         <li><a href="view_income.php"><i class="fas fa-eye"></i> View Income</a></li>
                         <li><a href="view_expenses.php"><i class="fas fa-eye"></i> View Expenses</a></li>
+                        <li><a href="backup_database.php"><i class="fas fa-database"></i> Backup</a></li>
                     </ul>
                 </div>
 
@@ -503,4 +504,5 @@
 // <button class="theme-toggle" onclick="toggleTheme()">
 //     <i class="fas fa-moon"></i>
 // </button>
+
 ?>
