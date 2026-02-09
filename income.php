@@ -1,6 +1,6 @@
 <?php
 require_once 'config.php';
-require_once 'custom_icons.php';
+
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -537,5 +537,6 @@ $form_amount = '';
 	<?php include 'footer.php'; ?>
 </body>
 </html>
+
 
 
